@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kalon-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: USE_MEMORY_DB
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_VERSION
+        value: "22"
