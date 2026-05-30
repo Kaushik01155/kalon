@@ -16,12 +16,7 @@ import adminRoutes from './routes/admin.js';
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
-});
-
-app.set('io', io);
+const isVercel = Boolean(process.env.VERCEL);
 
 app.use(cors());
 app.use(express.json());
@@ -38,40 +33,51 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/volunteer', volunteerRoutes);
 app.use('/api/admin', adminRoutes);
 
-io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
-  if (!token) return next(new Error('Authentication required'));
+app.set('io', null);
 
-  try {
-    socket.user = jwt.verify(token, process.env.JWT_SECRET || 'kalon_super_secret');
-    next();
-  } catch {
-    next(new Error('Invalid token'));
-  }
-});
-
-io.on('connection', (socket) => {
-  const { role, id } = socket.user;
-
-  if (role === 'volunteer') socket.join('volunteers');
-  if (role === 'admin') socket.join('admin');
-
-  socket.on('join:request', (requestId) => {
-    socket.join(`request:${requestId}`);
+if (!isVercel) {
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: { origin: '*', methods: ['GET', 'POST'] },
   });
 
-  socket.on('leave:request', (requestId) => {
-    socket.leave(`request:${requestId}`);
+  app.set('io', io);
+
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+
+    try {
+      socket.user = jwt.verify(token, process.env.JWT_SECRET || 'kalon_super_secret');
+      next();
+    } catch {
+      next(new Error('Invalid token'));
+    }
   });
 
-  console.log(`Socket connected: user ${id} (${role})`);
-});
+  io.on('connection', (socket) => {
+    const { role, id } = socket.user;
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0';
-httpServer.listen(PORT, HOST, () => {
-  console.log(`Kalon API running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-  console.log(`Mobile: use your PC IP, e.g. http://192.168.x.x:${PORT}`);
-});
+    if (role === 'volunteer') socket.join('volunteers');
+    if (role === 'admin') socket.join('admin');
+
+    socket.on('join:request', (requestId) => {
+      socket.join(`request:${requestId}`);
+    });
+
+    socket.on('leave:request', (requestId) => {
+      socket.leave(`request:${requestId}`);
+    });
+
+    console.log(`Socket connected: user ${id} (${role})`);
+  });
+
+  const PORT = process.env.PORT || 5000;
+  const HOST = process.env.HOST || '0.0.0.0';
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`Kalon API running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+    console.log(`Mobile: use your PC IP, e.g. http://192.168.x.x:${PORT}`);
+  });
+}
 
 export default app;

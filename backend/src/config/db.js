@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 let pool = null;
-let useMemory = process.env.USE_MEMORY_DB === 'true';
+let useMemory = process.env.USE_MEMORY_DB === 'true' || Boolean(process.env.VERCEL);
 
 const memoryDb = {
   users: [

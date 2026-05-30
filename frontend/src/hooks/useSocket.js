@@ -7,9 +7,10 @@ export function useSocket(onTrackingUpdate, onLocationUpdate) {
 
   useEffect(() => {
     const token = localStorage.getItem('kalon_token');
-    if (!token) return;
+    const url = getSocketUrl();
+    if (!token || !url) return;
 
-    const socket = io(getSocketUrl(), { auth: { token } });
+    const socket = io(url, { auth: { token } });
     socketRef.current = socket;
 
     if (onTrackingUpdate) {
